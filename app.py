@@ -82,12 +82,12 @@ if st.button("Cargar datos"):
         fig2.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1))
         st.plotly_chart(fig2, use_container_width=True)
 
-        # Neumáticos usados
+        # Neumáticos usados (fix aplicado aquí)
         st.subheader("Compuestos de neumáticos usados")
-        stints = session.laps.pick_driver(driver).get_stints()
+        stints = session.get_stints().query("Driver == @driver")
         stints['Driver'] = driver
         if driver_2:
-            stints_2 = session.laps.pick_driver(driver_2).get_stints()
+            stints_2 = session.get_stints().query("Driver == @driver_2")
             stints_2['Driver'] = driver_2
             stints = pd.concat([stints, stints_2])
         fig_stints = px.bar(stints, x='Driver', y='Lap', color='Compound', text='Compound',
