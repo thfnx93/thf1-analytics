@@ -3,13 +3,15 @@ from fastf1 import plotting
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime
-import os
 
-# Configuración inicial de la página
+# Cache para FastF1
+fastf1.Cache.enable_cache('cache')
+
 st.set_page_config(page_title="Análisis F1 2025", layout="wide")
 
-# Estilo visual tipo F1 TV Pro
+# Estilo visual tipo F1 Analist
 st.markdown("""
     <style>
     body {
@@ -19,20 +21,14 @@ st.markdown("""
     .stApp {
         background-color: #0d0d0d;
     }
-    .css-18e3th9 {
-        background-color: #0d0d0d;
+    .block-container {
+        padding: 2rem 2rem;
     }
-    .css-1d391kg {
-        background-color: #1e1e1e;
-    }
-    .css-1v0mbdj p {
+    .css-1v0mbdj p, .css-1v0mbdj h1, .css-1v0mbdj h2 {
         color: white;
     }
     </style>
 """, unsafe_allow_html=True)
-
-# Cache para FastF1
-fastf1.Cache.enable_cache('cache')
 
 st.title("🏁 Análisis en vivo de Fórmula 1 - Temporada 2025")
 
@@ -113,6 +109,26 @@ if st.button("Cargar datos"):
                 st.plotly_chart(fig_compound2, use_container_width=True)
             except Exception as e:
                 st.warning(f"No se pudo generar la estimación de neumáticos para {driver_2}: {e}")
+
+            # Comparación por sectores
+            st.subheader("📊 Comparación de rendimiento por sectores")
+            try:
+                sectors_df = pd.DataFrame({
+                    "Sector": ["Sector 1", "Sector 2", "Sector 3"],
+                    driver: [fastest['Sector1Time'].total_seconds(),
+                             fastest['Sector2Time'].total_seconds(),
+                             fastest['Sector3Time'].total_seconds()],
+                    driver_2: [fastest_2['Sector1Time'].total_seconds(),
+                               fastest_2['Sector2Time'].total_seconds(),
+                               fastest_2['Sector3Time'].total_seconds()]
+                })
+                fig_sectors = go.Figure()
+                fig_sectors.add_trace(go.Bar(x=sectors_df["Sector"], y=sectors_df[driver], name=driver))
+                fig_sectors.add_trace(go.Bar(x=sectors_df["Sector"], y=sectors_df[driver_2], name=driver_2))
+                fig_sectors.update_layout(barmode='group', title="Comparación por sectores (segundos)")
+                st.plotly_chart(fig_sectors, use_container_width=True)
+            except Exception as e:
+                st.warning(f"No se pudo generar comparación por sectores: {e}")
 
     except Exception as e:
         st.error(f"Error cargando la sesión: {e}")
