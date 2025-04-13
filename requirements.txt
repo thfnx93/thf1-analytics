@@ -1,6 +1,4 @@
 streamlit
-fastf1>=3.0.0
+fastf1
 plotly
 pandas
-httpx
-supabase-py
