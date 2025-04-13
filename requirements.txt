@@ -1,4 +1,5 @@
-streamlit
 fastf1
-plotly
+streamlit
 pandas
+plotly
+matplotlib
