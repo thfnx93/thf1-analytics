@@ -75,5 +75,44 @@ if st.button("Cargar datos"):
             st.write(f"Tiempo de vuelta más rápida de {driver_2}: `{fastest_2['LapTime']}`")
             st.dataframe(laps_2[['LapNumber', 'LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time']])
 
+            # Trazado del circuito con velocidad (track map)
+        st.subheader("🗺️ Trazado del circuito con velocidad")
+
+        fig_map = go.Figure()
+
+        # Telemetría del primer piloto con color según velocidad
+        fig_map.add_trace(go.Scatter(
+            x=telemetry['X'],
+            y=telemetry['Y'],
+            mode='lines',
+            line=dict(color=telemetry['Speed'], colorscale='Turbo', width=4),
+            name=driver,
+            showlegend=True
+        ))
+
+        # Si hay segundo piloto
+        if driver_2:
+            fig_map.add_trace(go.Scatter(
+                x=telemetry_2['X'],
+                y=telemetry_2['Y'],
+                mode='lines',
+                line=dict(color=telemetry_2['Speed'], colorscale='Jet', width=4),
+                name=driver_2,
+                showlegend=True
+            ))
+
+        fig_map.update_layout(
+            title="Trazado de pista con velocidad (color)",
+            xaxis_title="X",
+            yaxis_title="Y",
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            template="plotly_dark",
+            height=600
+        )
+
+        st.plotly_chart(fig_map, use_container_width=True)
+
+
     except Exception as e:
         st.error(f"Error cargando la sesión: {e}")
