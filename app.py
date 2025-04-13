@@ -6,88 +6,124 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Configuración inicial
-st.set_page_config(page_title="Análisis F1 PRO - 2025", layout="wide")
-st.title("🏎️ Dashboard F1 PRO - Temporada 2025")
+# Configurar estilo visual de la app (modo oscuro estilo F1)
+st.set_page_config(page_title="Análisis F1 2025", layout="wide")
 
-# Activar caché de FastF1
+st.markdown("""
+    <style>
+    body, .stApp {
+        background-color: #0d0d0d;
+        color: white;
+    }
+    .css-18e3th9, .css-1d391kg {
+        background-color: #1e1e1e;
+    }
+    .css-1v0mbdj p {
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Colores oficiales de neumáticos y escuderías (simplificado)
+tire_colors = {
+    'SOFT': '#FF3333',
+    'MEDIUM': '#FFD700',
+    'HARD': '#FFFFFF',
+    'INTERMEDIATE': '#39B54A',
+    'WET': '#0090FF'
+}
+
+team_colors = {
+    'Red Bull': '#1E41FF',
+    'Mercedes': '#00D2BE',
+    'Ferrari': '#DC0000',
+    'McLaren': '#FF8700',
+    'Aston Martin': '#006F62',
+    'Alpine': '#0090FF',
+    'Williams': '#005AFF',
+    'RB': '#6692FF',
+    'Haas': '#B6BABD',
+    'Kick Sauber': '#52E252'
+}
+
+# Cache para FastF1
 fastf1.Cache.enable_cache('cache')
 
-# Cargar calendario
+st.title("🏁 Análisis en vivo de Fórmula 1 - Temporada 2025")
+st.write(f"Versión de FastF1: {fastf1.__version__}")
+
 calendar = fastf1.get_event_schedule(2025, include_testing=False)
 races = calendar[['EventName', 'EventDate', 'RoundNumber']].sort_values('RoundNumber')
 
-# Selección de carrera
 selected_gp = st.selectbox("Selecciona un Gran Premio", races['EventName'].tolist())
 selected_round = int(races[races['EventName'] == selected_gp]['RoundNumber'])
 session_type = st.selectbox("Tipo de sesión", ["FP1", "FP2", "FP3", "Q", "SQ", "R"])
 
-if st.button("Cargar métricas visuales PRO"):
+show_all = st.toggle("Mostrar todos los pilotos")
+
+if st.button("Cargar datos"):
     try:
         session = fastf1.get_session(2025, selected_round, session_type)
         session.load()
 
-        # Análisis general de todos los pilotos
-        all_laps = session.laps.pick_quicklaps()
+        if show_all:
+            st.subheader("Promedio de tiempo por vuelta - Todos los pilotos")
+            avg_laps = session.laps.pick_quicklaps().groupby("Driver")['LapTime'].mean().sort_values()
+            avg_laps = avg_laps.reset_index()
 
-        # 1. Mínimos por piloto (vuelta más rápida)
-        st.subheader("⚡ Vuelta más rápida por piloto")
-        fastest_laps = all_laps.groupby("Driver").apply(lambda x: x.pick_fastest()).reset_index(drop=True)
-        fastest_laps = fastest_laps.sort_values("LapTime")
+            fig_avg = go.Figure()
+            for index, row in avg_laps.iterrows():
+                drv = row['Driver']
+                team = session.get_driver(drv)['TeamName']
+                color = team_colors.get(team, 'gray')
+                fig_avg.add_trace(go.Bar(
+                    x=[drv],
+                    y=[row['LapTime'].total_seconds()],
+                    marker_color=color,
+                    name=drv
+                ))
+            fig_avg.update_layout(title="Tiempo promedio por vuelta (segundos)", yaxis_title="Segundos")
+            st.plotly_chart(fig_avg, use_container_width=True)
 
-        fig_fast = px.bar(
-            fastest_laps,
-            x="Driver",
-            y="LapTime",
-            color="Driver",
-            title="Vuelta más rápida por piloto"
-        )
-        st.plotly_chart(fig_fast, use_container_width=True)
+            st.subheader("Uso de compuestos por piloto")
+            compound_df = session.laps.dropna(subset=["Compound"])
+            fig_tires = px.histogram(
+                compound_df,
+                x="Driver",
+                color="Compound",
+                color_discrete_map=tire_colors,
+                barmode="stack",
+                title="Distribución del uso de neumáticos por piloto"
+            )
+            st.plotly_chart(fig_tires, use_container_width=True)
 
-        # 2. Ritmo promedio por piloto
-        st.subheader("⏱️ Ritmo promedio por piloto")
-        avg_laps = all_laps.groupby("Driver")["LapTime"].mean().sort_values()
-        fig_avg = px.bar(
-            avg_laps,
-            x=avg_laps.index,
-            y=avg_laps.values,
-            labels={"x": "Piloto", "y": "Tiempo promedio"},
-            color=avg_laps.index,
-            title="Promedio de tiempos por vuelta"
-        )
-        st.plotly_chart(fig_avg, use_container_width=True)
+        else:
+            driver = st.text_input("Piloto (código FIA)", value="VER")
+            laps = session.laps.pick_driver(driver).pick_quicklaps()
+            fastest = laps.pick_fastest()
+            telemetry = fastest.get_car_data().add_distance()
 
-        # 3. Análisis de compuestos
-        st.subheader("🛞 Uso de compuestos por piloto")
-        compound_data = all_laps.dropna(subset=["Compound"])
-        compound_count = compound_data.groupby(["Driver", "Compound"]).size().reset_index(name="Vueltas")
-        fig_comp = px.bar(
-            compound_count,
-            x="Driver",
-            y="Vueltas",
-            color="Compound",
-            barmode="stack",
-            title="Distribución de compuestos usados"
-        )
-        st.plotly_chart(fig_comp, use_container_width=True)
+            st.subheader(f"Velocidad de {driver} - {selected_gp} {session_type}")
+            fig_speed = px.line(telemetry, x="Distance", y="Speed")
+            st.plotly_chart(fig_speed, use_container_width=True)
 
-        # 4. Sectores por piloto
-        st.subheader("📊 Rendimiento por sectores")
-        sector_data = fastest_laps[["Driver", "Sector1Time", "Sector2Time", "Sector3Time"]]
-        fig_sector = go.Figure()
-        for sector in ["Sector1Time", "Sector2Time", "Sector3Time"]:
-            fig_sector.add_trace(go.Bar(
-                x=sector_data["Driver"],
-                y=sector_data[sector].dt.total_seconds(),
-                name=sector
-            ))
-        fig_sector.update_layout(
-            barmode='group',
-            title="Comparación de tiempos por sector",
-            xaxis_title="Piloto",
-            yaxis_title="Tiempo (s)"
-        )
-        st.plotly_chart(fig_sector, use_container_width=True)
+            st.write(f"Tiempo de vuelta más rápida: `{fastest['LapTime']}`")
+            st.dataframe(laps[['LapNumber', 'LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time']])
+
+            st.subheader(f"Uso de compuestos - {driver}")
+            try:
+                compound_driver = laps[['LapNumber', 'Compound', 'LapTime']].dropna()
+                fig_driver_comp = px.bar(
+                    compound_driver,
+                    x="LapNumber",
+                    y="LapTime",
+                    color="Compound",
+                    color_discrete_map=tire_colors,
+                    title=f"Compuestos usados por vuelta - {driver}"
+                )
+                st.plotly_chart(fig_driver_comp, use_container_width=True)
+            except Exception as e:
+                st.warning(f"No se pudo generar la estimación de neumáticos: {e}")
 
     except Exception as e:
         st.error(f"Error cargando la sesión: {e}")
