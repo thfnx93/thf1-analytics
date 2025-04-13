@@ -1,1 +1,30 @@
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyd
+.Python
+Lib/
+Include/
+bin
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.env
+venv
+env
+*.egg-info/
+_pytest_cache/
+.coverage
+.pytest_cache
 
+# Carpeta de caché de FastF1 (si la tienes por defecto)
+cache/
+
+# Archivos de Streamlit (si los genera)
+.streamlit/
+
+# Otros archivos temporales o del sistema operativo
+.DS_Store
+Thumbs.db
