@@ -2,4 +2,5 @@ streamlit
 fastf1
 plotly
 pandas
+supabase-py
 fastf1>=3.1.0
