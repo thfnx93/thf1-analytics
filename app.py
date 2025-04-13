@@ -4,8 +4,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+from supabase import create_client, Client
+import os
 
-# Estilo visual tipo F1 TV Pro
+# ✅ Esto debe ir primero
+st.set_page_config(page_title="Análisis F1 2025", layout="wide")
+
+# 🎨 Estilo visual tipo F1 TV Pro
 st.markdown("""
     <style>
     body {
@@ -27,12 +32,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Conexión Supabase (reemplazar con tus claves reales)
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 # Cache para FastF1
 fastf1.Cache.enable_cache('cache')
 
-st.set_page_config(page_title="Análisis F1 2025", layout="wide")
-
-st.title("🏁 Análisis en vivo de Fórmula 1 - Temporada 2025")
+st.title("🏎️ Análisis en vivo de Fórmula 1 - Temporada 2025")
 
 # Mostrar versión de FastF1
 st.write(f"Versión de FastF1: {fastf1.__version__}")
@@ -69,6 +77,17 @@ if st.button("Cargar datos"):
 
         st.write(f"Tiempo de vuelta más rápida: `{fastest['LapTime']}`")
         st.dataframe(laps[['LapNumber', 'LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time']])
+
+        # Guardar en Supabase
+        data_to_store = {
+            "grand_prix": selected_gp,
+            "year": 2025,
+            "session_type": session_type,
+            "driver": driver,
+            "lap_time": str(fastest['LapTime'])
+        }
+        supabase.table("análisis_f1").insert(data_to_store).execute()
+        st.success("Datos guardados en Supabase")
 
         # Estimación visual del uso de compuestos por vuelta
         st.subheader("🔍 Estimación visual de uso de compuestos")
