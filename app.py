@@ -12,6 +12,9 @@ st.set_page_config(page_title="Análisis F1 2025", layout="wide")
 
 st.title("🏁 Análisis en vivo de Fórmula 1 - Temporada 2025")
 
+# Mostrar versión de FastF1
+st.write(f"Versión de FastF1: {fastf1.__version__}")
+
 # Carga del calendario automático
 calendar = fastf1.get_event_schedule(2025, include_testing=False)
 races = calendar[['EventName', 'EventDate', 'RoundNumber']].sort_values('RoundNumber')
