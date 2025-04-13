@@ -6,109 +6,82 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Estilos de Plotly
+# Estilo y cache
 plotting.setup_mpl(misc_mpl_mods=False)
-
-# Cache para FastF1
 fastf1.Cache.enable_cache('cache')
 
-st.set_page_config(page_title="F1 Live Dashboard 2025", layout="wide")
+st.set_page_config(page_title="Análisis F1 2025", layout="wide")
+st.title("🏁 Análisis en vivo de Fórmula 1 - Temporada 2025")
 
-st.markdown("""
-    <style>
-    .main {
-        background-color: #0d1117;
-        color: #f0f6fc;
-    }
-    .st-bw {
-        background-color: #161b22 !important;
-    }
-    .st-bz, .st-d1 {
-        color: #58a6ff !important;
-    }
-    .block-container {
-        padding-top: 2rem;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("🏎️ F1 Dashboard - Temporada 2025")
-st.markdown("Analiza sesiones, pilotos, compuestos y velocidades como en F1TV.")
-
-st.write(f"Versión FastF1: `{fastf1.__version__}`")
+st.markdown("---")
+st.write(f"Versión de FastF1: {fastf1.__version__}")
 
 calendar = fastf1.get_event_schedule(2025, include_testing=False)
 races = calendar[['EventName', 'EventDate', 'RoundNumber']].sort_values('RoundNumber')
 
-selected_gp = st.selectbox("Gran Premio", races['EventName'].tolist())
+selected_gp = st.selectbox("Selecciona un Gran Premio", races['EventName'].tolist())
 selected_round = int(races[races['EventName'] == selected_gp]['RoundNumber'])
-session_type = st.selectbox("Sesión", ["FP1", "FP2", "FP3", "Q", "SQ", "R"])
+session_type = st.selectbox("Tipo de sesión", ["FP1", "FP2", "FP3", "Q", "SQ", "R"])
 
 col1, col2 = st.columns(2)
-driver = col1.text_input("Código FIA piloto 1", value="VER")
-driver_2 = col2.text_input("Código FIA piloto 2 (opcional)", value="")
+driver = col1.text_input("Piloto (código FIA)", value="VER")
+driver_2 = col2.text_input("Segundo piloto (opcional)", value="LEC")
 
-if st.button("🔍 Analizar sesión"):
+if st.button("Cargar datos"):
     try:
         session = fastf1.get_session(2025, selected_round, session_type)
         session.load()
 
-        laps = session.laps.pick_driver(driver).pick_quicklaps()
-        fastest = laps.pick_fastest()
-        telemetry = fastest.get_car_data().add_distance()
+        laps_1 = session.laps.pick_driver(driver).pick_quicklaps()
+        laps_2 = session.laps.pick_driver(driver_2).pick_quicklaps() if driver_2 else None
 
-        fig_speed = px.line(telemetry, x="Distance", y="Speed",
-            title=f"Velocidad por distancia - {driver} ({selected_gp} {session_type})",
-            labels={"Speed": "Velocidad (km/h)", "Distance": "Distancia (m)"},
-            template="plotly_dark"
-        )
+        fastest_1 = laps_1.pick_fastest()
+        fastest_2 = laps_2.pick_fastest() if laps_2 is not None else None
 
+        telemetry_1 = fastest_1.get_car_data().add_distance()
+        telemetry_2 = fastest_2.get_car_data().add_distance() if fastest_2 is not None else None
+
+        st.subheader("Comparación de velocidad por distancia")
+        fig_speed = go.Figure()
+        fig_speed.add_trace(go.Scatter(x=telemetry_1['Distance'], y=telemetry_1['Speed'], name=driver))
+        if telemetry_2 is not None:
+            fig_speed.add_trace(go.Scatter(x=telemetry_2['Distance'], y=telemetry_2['Speed'], name=driver_2))
+        fig_speed.update_layout(title="Velocidad vs Distancia", xaxis_title="Distancia (m)", yaxis_title="Velocidad (km/h)")
         st.plotly_chart(fig_speed, use_container_width=True)
-        st.metric("Vuelta más rápida", f"{fastest['LapTime']}")
 
-        st.dataframe(laps[['LapNumber', 'LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time']], use_container_width=True)
+        st.subheader("Tiempo de vuelta más rápida")
+        st.write(f"{driver}: `{fastest_1['LapTime']}`")
+        if fastest_2 is not None:
+            st.write(f"{driver_2}: `{fastest_2['LapTime']}`")
 
-        if driver_2:
-            laps_2 = session.laps.pick_driver(driver_2).pick_quicklaps()
-            fastest_2 = laps_2.pick_fastest()
-            telemetry_2 = fastest_2.get_car_data().add_distance()
+        st.subheader("Gap por vuelta entre pilotos")
+        if laps_2 is not None:
+            df_gap = pd.DataFrame({
+                'Lap': range(1, min(len(laps_1), len(laps_2)) + 1),
+                'Gap (s)': laps_1['LapTime'].values[:len(laps_2)].astype('timedelta64[ms]').astype(float)/1000 -
+                           laps_2['LapTime'].values[:len(laps_2)].astype('timedelta64[ms]').astype(float)/1000
+            })
+            fig_gap = px.line(df_gap, x='Lap', y='Gap (s)', title="Evolución del Gap por Vuelta")
+            st.plotly_chart(fig_gap, use_container_width=True)
 
-            fig_compare = go.Figure()
-            fig_compare.add_trace(go.Scatter(x=telemetry["Distance"], y=telemetry["Speed"], mode='lines', name=driver))
-            fig_compare.add_trace(go.Scatter(x=telemetry_2["Distance"], y=telemetry_2["Speed"], mode='lines', name=driver_2))
-            fig_compare.update_layout(title=f"Comparación de velocidad - {driver} vs {driver_2}", template="plotly_dark")
+        st.subheader("Mapa de calor de sectores")
+        df_sector = laps_1[['LapNumber', 'Sector1Time', 'Sector2Time', 'Sector3Time']]
+        df_sector = df_sector.dropna()
+        df_sector[['S1', 'S2', 'S3']] = df_sector[['Sector1Time', 'Sector2Time', 'Sector3Time']].apply(lambda x: x.dt.total_seconds())
+        df_sector = df_sector[['LapNumber', 'S1', 'S2', 'S3']]
+        st.dataframe(df_sector.style.background_gradient(cmap='YlOrRd', axis=1), use_container_width=True)
 
-            st.plotly_chart(fig_compare, use_container_width=True)
+        st.subheader("Uso de compuestos de neumáticos (estimado)")
+        st.markdown("*No disponible directamente por FastF1, se requiere estimación manual.*")
+        try:
+            tires_data = session.laps.loc[session.laps['Driver'] == driver, ['LapNumber', 'Compound']]
+            fig_tires = px.histogram(tires_data, x='Compound', color='Compound', title='Distribución de Compuestos Usados')
+            st.plotly_chart(fig_tires, use_container_width=True)
+        except:
+            st.warning("No se pudo cargar la info de compuestos.")
 
-            st.dataframe(pd.DataFrame({
-                "Piloto": [driver, driver_2],
-                "Tiempo": [fastest['LapTime'], fastest_2['LapTime']]
-            }), use_container_width=True)
-
-        if session_type == "R":
-            st.subheader("Neumáticos por stint (estimado)")
-            try:
-                driver_laps = session.laps.pick_driver(driver)
-                stints = driver_laps[driver_laps['PitOutTime'].notna() & driver_laps['PitInTime'].notna()]
-                stints['Stint'] = stints.groupby((stints['PitInTime'].shift() != stints['PitInTime']).cumsum()).cumcount()
-
-                if driver_2:
-                    driver2_laps = session.laps.pick_driver(driver_2)
-                    stints2 = driver2_laps[driver2_laps['PitOutTime'].notna() & driver2_laps['PitInTime'].notna()]
-                    stints2['Stint'] = stints2.groupby((stints2['PitInTime'].shift() != stints2['PitInTime']).cumsum()).cumcount()
-                    stints2['Driver'] = driver_2
-                    stints = pd.concat([stints, stints2])
-
-                stints['Driver'] = stints.get('Driver', driver)
-                fig_stints = px.bar(
-                    stints, x='Driver', y='LapNumber', color='Compound', text='Compound',
-                    title='Uso de neumáticos estimado',
-                    labels={'LapNumber': 'Laps'}, template="plotly_dark"
-                )
-                st.plotly_chart(fig_stints, use_container_width=True)
-
-            except Exception as e:
-                st.warning(f"No se pudieron estimar stints de neumáticos: {e}")
+        st.subheader("Tabla de vueltas completas")
+        st.dataframe(laps_1[['LapNumber', 'LapTime', 'Compound', 'TyreLife', 'TrackStatus']], use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error al cargar la sesión: {e}")
+        st.error(f"Error cargando la sesión: {e}")
