@@ -59,10 +59,13 @@ session_type = st.selectbox("Tipo de sesión", ["FP1", "FP2", "FP3", "Q", "SQ", 
 driver = st.text_input("Piloto (código FIA)", value="VER")
 driver_2 = st.text_input("Segundo piloto (opcional, código FIA)", value="")
 
+show_comparison = st.toggle("Comparar pilotos")
+
 if st.button("Cargar datos"):
     try:
         session = fastf1.get_session(2025, selected_round, session_type)
         session.load()
+
         laps = session.laps.pick_driver(driver).pick_quicklaps()
         fastest = laps.pick_fastest()
 
@@ -85,10 +88,47 @@ if st.button("Cargar datos"):
         supabase.table("análisis_f1").insert(data_to_store).execute()
         st.success("Datos guardados en Supabase")
 
-        # Compuestos de neumáticos usados (visual fake)
-        if session_type == "R":
-            st.subheader("Compuestos de neumáticos usados")
-            st.warning("FastF1 3.5.3 aún no tiene get_stints(). Puedes actualizar a una versión más reciente si está disponible o esperar futuras mejoras.")
+        # Estimación visual del uso de compuestos por vuelta
+        st.subheader("🔍 Estimación visual de uso de compuestos")
+        try:
+            tyre_laps = session.laps.pick_driver(driver)[['LapNumber', 'Compound', 'LapTime']].dropna()
+            fig_compound = px.bar(
+                tyre_laps,
+                x="LapNumber",
+                y="LapTime",
+                color="Compound",
+                title=f"Estimación de uso de compuestos - {driver}"
+            )
+            st.plotly_chart(fig_compound, use_container_width=True)
+        except Exception as e:
+            st.warning(f"No se pudo generar la estimación de neumáticos para {driver}: {e}")
+
+        # Comparación con segundo piloto
+        if show_comparison and driver_2:
+            laps_2 = session.laps.pick_driver(driver_2).pick_quicklaps()
+            fastest_2 = laps_2.pick_fastest()
+
+            telemetry_2 = fastest_2.get_car_data().add_distance()
+            fig2 = px.line(telemetry_2, x="Distance", y="Speed", title=f"Velocidad de {driver_2} - {selected_gp} {session_type}")
+            st.plotly_chart(fig2, use_container_width=True)
+
+            st.write(f"Tiempo de vuelta más rápida: `{fastest_2['LapTime']}`")
+            st.dataframe(laps_2[['LapNumber', 'LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time']])
+
+            # Estimación visual del segundo piloto
+            st.subheader(f"🔍 Estimación visual de uso de compuestos - {driver_2}")
+            try:
+                tyre_laps2 = session.laps.pick_driver(driver_2)[['LapNumber', 'Compound', 'LapTime']].dropna()
+                fig_compound2 = px.bar(
+                    tyre_laps2,
+                    x="LapNumber",
+                    y="LapTime",
+                    color="Compound",
+                    title=f"Estimación de uso de compuestos - {driver_2}"
+                )
+                st.plotly_chart(fig_compound2, use_container_width=True)
+            except Exception as e:
+                st.warning(f"No se pudo generar la estimación de neumáticos para {driver_2}: {e}")
 
     except Exception as e:
         st.error(f"Error cargando la sesión: {e}")
