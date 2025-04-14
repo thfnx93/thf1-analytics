@@ -175,72 +175,83 @@ def plot_average_pace(laps):
         st.info("No hay datos de vueltas disponibles para calcular el promedio de ritmo.")
 
 # --- Main Execution ---
+if "session_data" not in st.session_state:
+    st.session_state["session_data"] = None
+
 if st.button("Cargar datos de todos los pilotos"):
     try:
         session = load_session_data(selected_year, selected_round, session_type)
         laps = session.laps.pick_quicklaps()
-
-        # --- Métricas Resumen ---
-        fastest_lap = laps.sort_values(by='LapTime').iloc[0]
-        st.metric("Vuelta Más Rápida", str(fastest_lap['LapTime']).split('.')[0], f"Piloto: {fastest_lap['Driver']}")
-
-        # --- Tabs para las visualizaciones ---
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación", "Sectores", "Ritmo"])
-
-        with tab1:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("⏱️ Tiempo por vuelta - Todos los pilotos")
-                plot_lap_times(laps)
-            with col2:
-                st.subheader("📉 Gap entre pilotos")
-                plot_gap_to_leader(laps)
-
-        with tab2:
-            st.subheader("📍 Posición por vuelta")
-            plot_positions(session.laps)
-
-        with tab3:
-            st.subheader("📊 Estrategia de Neumáticos por Piloto")
-            plot_tyre_strategy(laps)
-
-        with tab4:
-            st.subheader("🔎 Comparación personalizada entre pilotos")
-            drivers = session.drivers
-            driver_opts = [session.get_driver(d)["Abbreviation"] for d in drivers]
-            all_drivers_option = "Seleccionar todos"
-            options = [all_drivers_option] + driver_opts
-            selected_drivers = st.multiselect("Selecciona pilotos para comparar:", options, default=[all_drivers_option])
-            selected_metric = st.radio("Métrica a comparar:", ["LapTime", "Speed", "Sector1Time", "Sector2Time", "Sector3Time"])
-
-            if selected_drivers:
-                drivers_to_compare = []
-                if all_drivers_option in selected_drivers:
-                    drivers_to_compare = driver_opts
-                else:
-                    drivers_to_compare = selected_drivers
-                plot_driver_comparison(session, drivers_to_compare, selected_metric)
-
-        with tab5:
-            col_sec1, col_sec2, col_sec3 = st.columns(3)
-            with col_sec1:
-                st.subheader("⏱️ Sector 1")
-                plot_sector_times(laps, 1)
-            with col_sec2:
-                st.subheader("⏱️ Sector 2")
-                plot_sector_times(laps, 2)
-            with col_sec3:
-                st.subheader("⏱️ Sector 3")
-                plot_sector_times(laps, 3)
-            st.subheader("🏆 Mejores Tiempos por Sector")
-            plot_best_sector_times(laps)
-
-        with tab6:
-            if session_type == "R":
-                st.subheader("📊 Promedio de Tiempo por Vuelta (Carrera)")
-                plot_average_pace(laps)
-            else:
-                st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
-
+        st.session_state["session_data"] = {"session": session, "laps": laps}
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
+        st.session_state["session_data"] = None
+
+if st.session_state["session_data"]:
+    session = st.session_state["session_data"]["session"]
+    laps = st.session_state["session_data"]["laps"]
+
+    # --- Métricas Resumen ---
+    fastest_lap = laps.sort_values(by='LapTime').iloc[0]
+    st.metric("Vuelta Más Rápida", str(fastest_lap['LapTime']).split('.')[0], f"Piloto: {fastest_lap['Driver']}")
+
+    # --- Tabs para las visualizaciones ---
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación", "Sectores", "Ritmo"])
+
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("⏱️ Tiempo por vuelta - Todos los pilotos")
+            plot_lap_times(laps)
+        with col2:
+            st.subheader("📉 Gap entre pilotos")
+            plot_gap_to_leader(laps)
+
+    with tab2:
+        st.subheader("📍 Posición por vuelta")
+        plot_positions(session.laps)
+
+    with tab3:
+        st.subheader("📊 Estrategia de Neumáticos por Piloto")
+        plot_tyre_strategy(laps)
+
+    with tab4:
+        st.subheader("🔎 Comparación personalizada entre pilotos")
+        drivers = session.drivers
+        driver_opts = [session.get_driver(d)["Abbreviation"] for d in drivers]
+        all_drivers_option = "Seleccionar todos"
+        options = [all_drivers_option] + driver_opts
+        selected_drivers = st.multiselect("Selecciona pilotos para comparar:", options, default=[all_drivers_option], key="selected_drivers_compare")
+        selected_metric = st.radio("Métrica a comparar:", ["LapTime", "Speed", "Sector1Time", "Sector2Time", "Sector3Time"], key="selected_metric_compare")
+
+        if st.session_state.get("selected_drivers_compare"):
+            drivers_to_compare = []
+            if all_drivers_option in st.session_state["selected_drivers_compare"]:
+                drivers_to_compare = driver_opts
+            else:
+                drivers_to_compare = st.session_state["selected_drivers_compare"]
+            plot_driver_comparison(session, drivers_to_compare, st.session_state.get("selected_metric_compare", "LapTime"))
+
+    with tab5:
+        col_sec1, col_sec2, col_sec3 = st.columns(3)
+        with col_sec1:
+            st.subheader("⏱️ Sector 1")
+            plot_sector_times(laps, 1)
+        with col_sec2:
+            st.subheader("⏱️ Sector 2")
+            plot_sector_times(laps, 2)
+        with col_sec3:
+            st.subheader("⏱️ Sector 3")
+            plot_sector_times(laps, 3)
+        st.subheader("🏆 Mejores Tiempos por Sector")
+        plot_best_sector_times(laps)
+
+    with tab6:
+        if session_type == "R":
+            st.subheader("📊 Promedio de Tiempo por Vuelta (Carrera)")
+            plot_average_pace(laps)
+        else:
+            st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
+
+else:
+    st.info("Por favor, carga los datos de la sesión.")
