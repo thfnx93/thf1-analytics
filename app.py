@@ -210,5 +210,21 @@ if st.button("Cargar datos de todos los pilotos"):
                 )
                 st.plotly_chart(fig_sec3, use_container_width=True)
 
+            st.subheader("🏆 Mejores Tiempos por Sector")
+            best_sectors = laps.groupby('Driver')[['Sector1Time', 'Sector2Time', 'Sector3Time']].min().reset_index()
+            best_sectors_melted = best_sectors.melt(id_vars='Driver', var_name='Sector', value_name='Time')
+
+            fig_best_sectors = px.bar(
+                best_sectors_melted,
+                x='Driver',
+                y='Time',
+                color='Sector',
+                category_orders={'Sector': ['Sector1Time', 'Sector2Time', 'Sector3Time']},
+                title='Mejores Tiempos por Sector por Piloto',
+                labels={'Time': 'Tiempo', 'Sector': 'Sector'},
+                hover_data=['Time']
+            )
+            st.plotly_chart(fig_best_sectors, use_container_width=True)
+
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
