@@ -186,6 +186,7 @@ if st.button("Cargar datos de todos los pilotos"):
         session = load_session_data(selected_year, selected_round, session_type)
         laps = session.laps.pick_quicklaps()
         st.session_state["session_data"] = {"session": session, "laps": laps}
+        print(laps.columns)  # Imprimir las columnas del DataFrame laps
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
         st.session_state["session_data"] = None
