@@ -285,11 +285,4 @@ if st.button("Cargar datos de todos los pilotos"):
                 fig_avg_pace = px.bar(
                     average_pace,
                     x='Driver',
-                    y='LapTime',
-                    title='Promedio de Tiempo por Vuelta por Piloto (Carrera)',
-                    labels={'LapTime': 'Tiempo Promedio'},
-                    hover_data=['LapTime']
-                )
-                st.plotly_chart(fig_avg_pace, use_container_width=True)
-            else:
-                st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
+                    y='Lap
