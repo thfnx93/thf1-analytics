@@ -293,11 +293,3 @@ if st.button("Cargar datos de todos los pilotos"):
                 st.plotly_chart(fig_avg_pace, use_container_width=True)
             else:
                 st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
-
-        with tab7:
-            st.subheader("📊 Visualización de Telemetría")
-            all_laps_telemetry = session.laps.dropna(subset=['LapTime', 'Telemetry'])
-            drivers_for_telemetry = [session.get_driver(d)["Abbreviation"] for d in session.drivers]
-
-            selected_driver_telemetry = st.selectbox("Selecciona un piloto para la telemetría:", drivers_for_telemetry, key="driver_telemetry")
-            lap_options_telemetry = all_laps_telemetry
