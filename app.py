@@ -300,4 +300,4 @@ if st.button("Cargar datos de todos los pilotos"):
             drivers_for_telemetry = [session.get_driver(d)["Abbreviation"] for d in session.drivers]
 
             selected_driver_telemetry = st.selectbox("Selecciona un piloto para la telemetría:", drivers_for_telemetry, key="driver_telemetry")
-            lap_options_telemetry = all_laps_telemetry[all_laps_telemetry['Driver'] == selected_driver_tele
+            lap_options_telemetry = all_laps_telemetry
