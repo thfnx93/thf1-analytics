@@ -99,7 +99,7 @@ def plot_tyre_strategy(laps, compound_colors):
         labels={'Duration': 'Duración del Stint (Vueltas)', 'Compound': 'Compuesto'},
         category_orders={'Compound': list(compound_colors.keys())}
     )
-    st.plotly_chart(fig_tyre_strategy, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
 def plot_driver_comparison(session, selected_drivers, selected_metric):
     fig = go.Figure()
@@ -187,7 +187,7 @@ if st.button("Cargar datos de todos los pilotos"):
                         hovertemplate="Vuelta: %{x}<br>%{yaxis.title.text}: %{y}<br>Piloto: %{data.name}<extra></extra>"
                     ))
                 fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
-                st.plotly_chart(fig_compare, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)
 
             st.subheader("🏁 Comparación de Vueltas Específicas")
             all_laps = session.laps.dropna(subset=['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time'])
@@ -205,4 +205,90 @@ if st.button("Cargar datos de todos los pilotos"):
 
             if st.session_state.get('lap1_compare') and st.session_state.get('lap2_compare') and st.session_state.get('driver1_compare') and st.session_state.get('driver2_compare'):
                 lap_data_driver1 = all_laps[(all_laps['Driver'].isin(st.session_state['driver1_compare'])) & (all_laps['LapNumber'] == st.session_state['lap1_compare'])][['Driver', 'LapNumber', 'Sector1Time', 'Sector2Time', 'Sector3Time']].iloc[0]
-                lap_data_driver2 = all_l
+                lap_data_driver2 = all_laps[(all_laps['Driver'].isin(st.session_state['driver2_compare'])) & (all_laps['LapNumber'] == st.session_state['lap2_compare'])][['Driver', 'LapNumber', 'Sector1Time', 'Sector2Time', 'Sector3Time']].iloc[0]
+
+                comparison_data = pd.DataFrame({
+                    'Sector': ['Sector 1', 'Sector 2', 'Sector 3'],
+                    lap_data_driver1['Driver']: [lap_data_driver1['Sector1Time'].total_seconds(), lap_data_driver1['Sector2Time'].total_seconds(), lap_data_driver1['Sector3Time'].total_seconds()],
+                    lap_data_driver2['Driver']: [lap_data_driver2['Sector1Time'].total_seconds(), lap_data_driver2['Sector2Time'].total_seconds(), lap_data_driver2['Sector3Time'].total_seconds()]
+                }).set_index('Sector')
+
+                fig_lap_comparison = px.bar(comparison_data, barmode='group', title=f"Comparación de Vueltas")
+                fig_lap_comparison.update_yaxes(title_text="Tiempo (segundos)")
+                st.plotly_chart(fig_lap_comparison, use_container_width=True)
+
+        with tab5:
+            st.subheader("⏱️ Tiempos por Sector - Todos los pilotos")
+            col_sec1, col_sec2, col_sec3 = st.columns(3)
+
+            with col_sec1:
+                fig_sec1 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector1Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 1",
+                    hover_data=["LapNumber", "Sector1Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec1, use_container_width=True)
+
+            with col_sec2:
+                fig_sec2 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector2Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 2",
+                    hover_data=["LapNumber", "Sector2Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec2, use_container_width=True)
+
+            with col_sec3:
+                fig_sec3 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector3Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 3",
+                    hover_data=["LapNumber", "Sector3Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec3, use_container_width=True)
+
+            st.subheader("🏆 Mejores Tiempos por Sector")
+            best_sectors = laps.groupby('Driver')[['Sector1Time', 'Sector2Time', 'Sector3Time']].min().reset_index()
+            best_sectors_melted = best_sectors.melt(id_vars='Driver', var_name='Sector', value_name='Time')
+
+            fig_best_sectors = px.bar(
+                best_sectors_melted,
+                x='Driver',
+                y='Time',
+                color='Sector',
+                category_orders={'Sector': ['Sector1Time', 'Sector2Time', 'Sector3Time']},
+                title='Mejores Tiempos por Sector por Piloto',
+                labels={'Time': 'Tiempo', 'Sector': 'Sector'},
+                hover_data=['Time']
+            )
+            st.plotly_chart(fig_best_sectors, use_container_width=True)
+
+        with tab6:
+            if session_type == "R":
+                st.subheader("📊 Promedio de Tiempo por Vuelta (Carrera)")
+                average_pace = laps.groupby('Driver')['LapTime'].mean().sort_values().reset_index()
+
+                fig_avg_pace = px.bar(
+                    average_pace,
+                    x='Driver',
+                    y='LapTime',
+                    title='Promedio de Tiempo por Vuelta por Piloto (Carrera)',
+                    labels={'LapTime': 'Tiempo Promedio'},
+                    hover_data=['LapTime']
+                )
+                st.plotly_chart(fig_avg_pace, use_container_width=True)
+            else:
+                st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
+
+    except Exception as e:
+        st.error(f"Error al cargar datos: {e}")
