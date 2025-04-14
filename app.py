@@ -43,24 +43,58 @@ def load_session_data(year, round_number, session_type):
 
 # --- Funciones de Visualización ---
 def plot_lap_times(laps):
-    fig = px.line(laps, x="LapNumber", y="LapTime", color="Driver", line_shape="spline", title="Tiempos por vuelta por piloto")
+    fig = px.line(
+        laps,
+        x="LapNumber",
+        y="LapTime",
+        color="Driver",
+        line_shape="spline",
+        title="Tiempos por vuelta por piloto",
+        hover_data=["LapNumber", "LapTime", "Driver"]
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_gap_to_leader(laps):
     gap_data = laps.copy().sort_values(by=["LapNumber", "LapTime"])
     gap_data['GapToLeader'] = gap_data.groupby("LapNumber")['LapTime'].transform(lambda x: x - x.min())
-    fig = px.line(gap_data, x="LapNumber", y="GapToLeader", color="Driver", line_shape="spline", title="Diferencia de tiempo respecto al líder")
+    fig = px.line(
+        gap_data,
+        x="LapNumber",
+        y="GapToLeader",
+        color="Driver",
+        line_shape="spline",
+        title="Diferencia de tiempo respecto al líder",
+        hover_data=["LapNumber", "GapToLeader", "Driver"]
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_positions(laps):
     pos = laps[~laps['Position'].isna()]
-    fig = px.line(pos, x="LapNumber", y="Position", color="Driver", title="Posición por vuelta", line_shape="spline", markers=True)
+    fig = px.line(
+        pos,
+        x="LapNumber",
+        y="Position",
+        color="Driver",
+        title="Posición por vuelta",
+        line_shape="spline",
+        markers=True,
+        hover_data=["LapNumber", "Position", "Driver"]
+    )
     fig.update_yaxes(autorange="reversed")
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_tyre_strategy(laps, compound_colors):
     tyre_data = laps[['Driver', 'LapNumber', 'Compound', 'LapTime']].dropna()
-    fig = px.bar(tyre_data, x="LapNumber", y="LapTime", color="Compound", color_discrete_map=compound_colors, facet_row="Driver", title="Compuestos usados por vuelta")
+    fig = px.bar(
+        tyre_data,
+        x="LapNumber",
+        y="LapTime",
+        color="Compound",
+        color_discrete_map=compound_colors,
+        facet_row="Driver",
+        title="Compuestos usados por vuelta",
+        hover_data=["LapNumber", "LapTime", "Compound", "Driver"]
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_driver_comparison(session, selected_drivers, selected_metric):
@@ -71,7 +105,8 @@ def plot_driver_comparison(session, selected_drivers, selected_metric):
             x=dr_laps["LapNumber"],
             y=dr_laps[selected_metric],
             mode="lines+markers",
-            name=drv
+            name=drv,
+            hovertemplate="Vuelta: %{x}<br>%{yaxis.title.text}: %{y}<br>Piloto: %{data.name}<extra></extra>"
         ))
     fig.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
     st.plotly_chart(fig, use_container_width=True)
@@ -129,7 +164,8 @@ if st.button("Cargar datos de todos los pilotos"):
                         x=dr_laps["LapNumber"],
                         y=dr_laps[selected_metric],
                         mode="lines+markers",
-                        name=drv
+                        name=drv,
+                        hovertemplate="Vuelta: %{x}<br>%{yaxis.title.text}: %{y}<br>Piloto: %{data.name}<extra></extra>"
                     ))
                 fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
                 st.plotly_chart(fig_compare, use_container_width=True)
