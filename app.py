@@ -84,7 +84,7 @@ if st.button("Cargar datos de todos los pilotos"):
 
         # --- Métricas Resumen ---
         fastest_lap = laps.sort_values(by='LapTime').iloc[0]
-        st.metric("Vuelta Más Rápida", fastest_lap['LapTime'].round('ms'), f"Piloto: {fastest_lap['Driver']}")
+        st.metric("Vuelta Más Rápida", str(fastest_lap['LapTime']).split('.')[0], f"Piloto: {fastest_lap['Driver']}")
 
         # --- Tabs para las visualizaciones ---
         tab1, tab2, tab3, tab4 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación"])
