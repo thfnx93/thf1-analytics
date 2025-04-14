@@ -102,18 +102,18 @@ def plot_tyre_strategy(laps, compound_colors):
     st.plotly_chart(fig_tyre_strategy, use_container_width=True)
 
 def plot_driver_comparison(session, selected_drivers, selected_metric):
-    fig = go.Figure()
+    fig_compare = go.Figure()
     for drv in selected_drivers:
         dr_laps = session.laps.pick_driver(drv).pick_quicklaps()
-        fig.add_trace(go.Scatter(
+        fig_compare.add_trace(go.Scatter(
             x=dr_laps["LapNumber"],
             y=dr_laps[selected_metric],
             mode="lines+markers",
             name=drv,
             hovertemplate="Vuelta: %{x}<br>%{yaxis.title.text}: %{y}<br>Piloto: %{data.name}<extra></extra>"
         ))
-    fig.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
-    st.plotly_chart(fig, use_container_width=True)
+    fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
+    st.plotly_chart(fig_compare, use_container_width=True)
 
 # --- Main Execution ---
 if st.button("Cargar datos de todos los pilotos"):
@@ -187,7 +187,7 @@ if st.button("Cargar datos de todos los pilotos"):
                         hovertemplate="Vuelta: %{x}<br>%{yaxis.title.text}: %{y}<br>Piloto: %{data.name}<extra></extra>"
                     ))
                 fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig_compare, use_container_width=True)
 
             st.subheader("🏁 Comparación de Vueltas Específicas")
             all_laps = session.laps.dropna(subset=['LapTime', 'Sector1Time', 'Sector2Time', 'Sector3Time'])
