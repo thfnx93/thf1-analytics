@@ -99,7 +99,7 @@ def plot_tyre_strategy(laps, compound_colors):
         labels={'Duration': 'Duración del Stint (Vueltas)', 'Compound': 'Compuesto'},
         category_orders={'Compound': list(compound_colors.keys())}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_tyre_strategy, use_container_width=True)
 
 def plot_driver_comparison(session, selected_drivers, selected_metric):
     fig = go.Figure()
