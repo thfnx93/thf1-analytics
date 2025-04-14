@@ -84,18 +84,22 @@ def plot_positions(laps):
     st.plotly_chart(fig, use_container_width=True)
 
 def plot_tyre_strategy(laps, compound_colors):
-    tyre_data = laps[['Driver', 'LapNumber', 'Compound', 'LapTime']].dropna()
-    fig = px.bar(
-        tyre_data,
-        x="LapNumber",
-        y="LapTime",
-        color="Compound",
+    tyre_strategy_data = laps[['Driver', 'LapNumber', 'Compound']].dropna()
+    tyre_strategy_data['Stint'] = (tyre_strategy_data['Compound'] != tyre_strategy_data['Compound'].shift()).astype(int).groupby(tyre_strategy_data['Driver']).cumsum()
+    stint_lengths = tyre_strategy_data.groupby(['Driver', 'Stint', 'Compound'])['LapNumber'].agg(['min', 'max']).reset_index()
+    stint_lengths['Duration'] = stint_lengths['max'] - stint_lengths['min'] + 1
+
+    fig_tyre_strategy = px.bar(
+        stint_lengths,
+        x='Driver',
+        y='Duration',
+        color='Compound',
         color_discrete_map=compound_colors,
-        facet_row="Driver",
-        title="Compuestos usados por vuelta",
-        hover_data=["LapNumber", "LapTime", "Compound", "Driver"]
+        title='Estrategia de Neumáticos por Piloto',
+        labels={'Duration': 'Duración del Stint (Vueltas)', 'Compound': 'Compuesto'},
+        category_orders={'Compound': list(compound_colors.keys())}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_tyre_strategy, use_container_width=True)
 
 def plot_driver_comparison(session, selected_drivers, selected_metric):
     fig = go.Figure()
@@ -138,8 +142,23 @@ if st.button("Cargar datos de todos los pilotos"):
             plot_positions(session.laps)
 
         with tab3:
-            st.subheader("🏎️ Compuestos utilizados por vuelta")
-            plot_tyre_strategy(laps, compound_colors)
+            st.subheader("📊 Estrategia de Neumáticos por Piloto")
+            tyre_strategy_data = laps[['Driver', 'LapNumber', 'Compound']].dropna()
+            tyre_strategy_data['Stint'] = (tyre_strategy_data['Compound'] != tyre_strategy_data['Compound'].shift()).astype(int).groupby(tyre_strategy_data['Driver']).cumsum()
+            stint_lengths = tyre_strategy_data.groupby(['Driver', 'Stint', 'Compound'])['LapNumber'].agg(['min', 'max']).reset_index()
+            stint_lengths['Duration'] = stint_lengths['max'] - stint_lengths['min'] + 1
+
+            fig_tyre_strategy = px.bar(
+                stint_lengths,
+                x='Driver',
+                y='Duration',
+                color='Compound',
+                color_discrete_map=compound_colors,
+                title='Estrategia de Neumáticos por Piloto',
+                labels={'Duration': 'Duración del Stint (Vueltas)', 'Compound': 'Compuesto'},
+                category_orders={'Compound': list(compound_colors.keys())}
+            )
+            st.plotly_chart(fig_tyre_strategy, use_container_width=True)
 
         with tab4:
             st.subheader("🔎 Comparación personalizada entre pilotos")
