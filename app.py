@@ -122,7 +122,7 @@ if st.button("Cargar datos de todos los pilotos"):
         st.metric("Vuelta Más Rápida", str(fastest_lap['LapTime']).split('.')[0], f"Piloto: {fastest_lap['Driver']}")
 
         # --- Tabs para las visualizaciones ---
-        tab1, tab2, tab3, tab4 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación", "Sectores"])
 
         with tab1:
             col1, col2 = st.columns(2)
@@ -169,6 +169,46 @@ if st.button("Cargar datos de todos los pilotos"):
                     ))
                 fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
                 st.plotly_chart(fig_compare, use_container_width=True)
+
+        with tab5:
+            st.subheader("⏱️ Tiempos por Sector - Todos los pilotos")
+            col_sec1, col_sec2, col_sec3 = st.columns(3)
+
+            with col_sec1:
+                fig_sec1 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector1Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 1",
+                    hover_data=["LapNumber", "Sector1Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec1, use_container_width=True)
+
+            with col_sec2:
+                fig_sec2 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector2Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 2",
+                    hover_data=["LapNumber", "Sector2Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec2, use_container_width=True)
+
+            with col_sec3:
+                fig_sec3 = px.line(
+                    laps,
+                    x="LapNumber",
+                    y="Sector3Time",
+                    color="Driver",
+                    line_shape="spline",
+                    title="Sector 3",
+                    hover_data=["LapNumber", "Sector3Time", "Driver"]
+                )
+                st.plotly_chart(fig_sec3, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
