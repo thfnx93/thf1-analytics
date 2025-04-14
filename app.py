@@ -67,7 +67,12 @@ def plot_driver_comparison(session, selected_drivers, selected_metric):
     fig = go.Figure()
     for drv in selected_drivers:
         dr_laps = session.laps.pick_driver(drv).pick_quicklaps()
-        fig.add_trace(go.Scatter(x=dr_laps["LapNumber"], y=dr_laps[selected_metric], mode="lines+markers", name=drv))
+        fig.add_trace(go.Scatter(
+            x=dr_laps["LapNumber"],
+            y=dr_laps[selected_metric],
+            mode="lines+markers",
+            name=drv
+        ))
     fig.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -77,25 +82,57 @@ if st.button("Cargar datos de todos los pilotos"):
         session = load_session_data(2025, selected_round, session_type)
         laps = session.laps.pick_quicklaps()
 
-        st.subheader("⏱️ Tiempo por vuelta - Todos los pilotos")
-        plot_lap_times(laps)
+        # --- Métricas Resumen ---
+        fastest_lap = laps.sort_values(by='LapTime').iloc[0]
+        st.metric("Vuelta Más Rápida", fastest_lap['LapTime'].to_timedelta().round('ms'), f"Piloto: {fastest_lap['Driver']}")
 
-        st.subheader("📉 Gap entre pilotos")
-        plot_gap_to_leader(laps)
+        # --- Tabs para las visualizaciones ---
+        tab1, tab2, tab3, tab4 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación"])
 
-        st.subheader("📍 Posición por vuelta")
-        plot_positions(session.laps)
+        with tab1:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("⏱️ Tiempo por vuelta - Todos los pilotos")
+                plot_lap_times(laps)
+            with col2:
+                st.subheader("📉 Gap entre pilotos")
+                plot_gap_to_leader(laps)
 
-        st.subheader("🏎️ Compuestos utilizados por vuelta")
-        plot_tyre_strategy(laps, compound_colors)
+        with tab2:
+            st.subheader("📍 Posición por vuelta")
+            plot_positions(session.laps)
 
-        st.subheader("🔎 Comparación personalizada entre pilotos")
-        drivers = session.drivers
-        driver_opts = [session.get_driver(d)["Abbreviation"] for d in drivers]
-        selected_drivers = st.multiselect("Selecciona pilotos para comparar:", driver_opts)
-        selected_metric = st.radio("Métrica a comparar:", ["LapTime", "Speed", "Sector1Time", "Sector2Time", "Sector3Time"])
-        if selected_drivers:
-            plot_driver_comparison(session, selected_drivers, selected_metric)
+        with tab3:
+            st.subheader("🏎️ Compuestos utilizados por vuelta")
+            plot_tyre_strategy(laps, compound_colors)
+
+        with tab4:
+            st.subheader("🔎 Comparación personalizada entre pilotos")
+            drivers = session.drivers
+            driver_opts = [session.get_driver(d)["Abbreviation"] for d in drivers]
+            all_drivers_option = "Seleccionar todos"
+            options = [all_drivers_option] + driver_opts
+            selected_drivers = st.multiselect("Selecciona pilotos para comparar:", options, default=[all_drivers_option])
+            selected_metric = st.radio("Métrica a comparar:", ["LapTime", "Speed", "Sector1Time", "Sector2Time", "Sector3Time"])
+
+            if selected_drivers:
+                drivers_to_compare = []
+                if all_drivers_option in selected_drivers:
+                    drivers_to_compare = driver_opts
+                else:
+                    drivers_to_compare = selected_drivers
+
+                fig_compare = go.Figure()
+                for drv in drivers_to_compare:
+                    dr_laps = session.laps.pick_driver(drv).pick_quicklaps()
+                    fig_compare.add_trace(go.Scatter(
+                        x=dr_laps["LapNumber"],
+                        y=dr_laps[selected_metric],
+                        mode="lines+markers",
+                        name=drv
+                    ))
+                fig_compare.update_layout(title=f"Comparación de pilotos - {selected_metric}", xaxis_title="Vuelta", yaxis_title=selected_metric)
+                st.plotly_chart(fig_compare, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
