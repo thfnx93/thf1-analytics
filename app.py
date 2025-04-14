@@ -122,15 +122,18 @@ def plot_driver_comparison(session, selected_drivers, selected_metric):
     fig = go.Figure()
     for drv in selected_drivers:
         dr_laps = session.laps.pick_driver(drv).pick_quicklaps()
-        fig.add_trace(go.Scatter(
-            x=dr_laps["LapNumber"],
-            y=dr_laps[selected_metric],
-            mode="lines+markers",
-            name=drv,
-            marker=dict(color=driver_colors[session.drivers.index(session.get_driver(drv)["DriverNumber"]) % len(driver_colors)]),
-            line=dict(width=1),
-            hovertemplate=f"Vuelta: %{{x}}<br>%{{yaxis.title.text}}: %{{y}}<br>Piloto: {drv}<extra></extra>"
-        ))
+        if selected_metric in dr_laps.columns:
+            fig.add_trace(go.Scatter(
+                x=dr_laps["LapNumber"],
+                y=dr_laps[selected_metric],
+                mode="lines+markers",
+                name=drv,
+                marker=dict(color=driver_colors[session.drivers.index(session.get_driver(drv)["DriverNumber"]) % len(driver_colors)]),
+                line=dict(width=1),
+                hovertemplate=f"Vuelta: %{{x}}<br>%{{yaxis.title.text}}: %{{y}}<br>Piloto: {drv}<extra></extra>"
+            ))
+        else:
+            st.warning(f"La métrica '{selected_metric}' no está disponible para el piloto {drv} en esta sesión.")
     fig.update_layout(title=f"Comparación de pilotos - {selected_metric} - {selected_gp} {session_type}", xaxis_title="Vuelta", yaxis_title=selected_metric)
     st.plotly_chart(fig, use_container_width=True)
 
