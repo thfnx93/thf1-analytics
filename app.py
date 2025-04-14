@@ -122,7 +122,7 @@ if st.button("Cargar datos de todos los pilotos"):
         st.metric("Vuelta Más Rápida", str(fastest_lap['LapTime']).split('.')[0], f"Piloto: {fastest_lap['Driver']}")
 
         # --- Tabs para las visualizaciones ---
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación", "Sectores"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Tiempos por Vuelta", "Posiciones", "Neumáticos", "Comparación", "Sectores", "Ritmo"])
 
         with tab1:
             col1, col2 = st.columns(2)
@@ -225,6 +225,23 @@ if st.button("Cargar datos de todos los pilotos"):
                 hover_data=['Time']
             )
             st.plotly_chart(fig_best_sectors, use_container_width=True)
+
+        with tab6:
+            if session_type == "R":
+                st.subheader("📊 Promedio de Tiempo por Vuelta (Carrera)")
+                average_pace = laps.groupby('Driver')['LapTime'].mean().sort_values().reset_index()
+
+                fig_avg_pace = px.bar(
+                    average_pace,
+                    x='Driver',
+                    y='LapTime',
+                    title='Promedio de Tiempo por Vuelta por Piloto (Carrera)',
+                    labels={'LapTime': 'Tiempo Promedio'},
+                    hover_data=['LapTime']
+                )
+                st.plotly_chart(fig_avg_pace, use_container_width=True)
+            else:
+                st.info("El análisis de ritmo de carrera solo está disponible para las sesiones de carrera (R).")
 
     except Exception as e:
         st.error(f"Error al cargar datos: {e}")
