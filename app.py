@@ -145,8 +145,9 @@ def plot_average_pace(laps):
         average_pace,
         x_col='Driver',
         y_col='LapTime',
+        color_col='Driver',
         title='Promedio de Tiempo por Vuelta por Piloto (Carrera)',
-        labels={'LapTime': 'Tiempo Promedio'},
+        labels={'LapTime': 'Tiempo Promedio', 'Driver': 'Piloto'},
         hover_cols=['LapTime']
     )
 
